@@ -1,4 +1,4 @@
-from .patchcog import PatchCog
+from .patchnotes import PatchCog
 
 
 async def setup(bot):

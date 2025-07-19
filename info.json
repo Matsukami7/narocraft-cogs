@@ -1,0 +1,11 @@
+{
+    "author": ["Narokuu"],
+    "name": "PatchCog",
+    "short": "Game patch notes announcer",
+    "description": "A cog for fetching and announcing game patch notes from various sources like Steam API.",
+    "install_msg": "Thanks for installing PatchCog! Use `^patchhelp` to see available commands.",
+    "tags": ["gaming", "patch notes", "steam", "announcements"],
+    "requirements": ["aiohttp"],
+    "hidden": false,
+    "end_user_data_statement": "This cog does not persistently store data or metadata about users."
+}

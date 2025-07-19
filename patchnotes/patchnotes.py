@@ -42,6 +42,13 @@ class PatchCog(commands.Cog):
                 "emoji": "⚔️",
                 "color": 0x8B4513,  # Brown/Bronze
                 "aliases": ["ffxiv", "ff14", "finalfantasy14", "finalfantasyxiv"]
+            },
+            "nms": {
+                "appid": "275850",
+                "name": "No Man's Sky",
+                "emoji": "🚀",
+                "color": 0xFF1493,  # Deep Pink
+                "aliases": ["nms", "nomanssky", "no-mans-sky"]
             }
         }
 

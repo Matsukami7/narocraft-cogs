@@ -4,7 +4,7 @@ A custom Redbot cog for fetching and announcing game patch notes from Steam API.
 
 ## Features
 
-- **Multi-Game Support**: Currently supports Factorio, Stellaris, and Final Fantasy XIV
+- **Multi-Game Support**: Currently supports Factorio, Stellaris, Final Fantasy XIV, and No Man's Sky
 - **Unified Commands**: Single command structure for all games
 - **Channel Configuration**: Set custom announcement channels per server
 - **Rich Embeds**: Beautiful Discord embeds with game-specific themes
@@ -54,6 +54,7 @@ A custom Redbot cog for fetching and announcing game patch notes from Steam API.
 | 🏭 Factorio | `factorio` | factorio | 427520 |
 | 🌌 Stellaris | `stellaris` | stellaris | 281990 |
 | ⚔️ Final Fantasy XIV | `ffxiv` | ffxiv, ff14, finalfantasy14, finalfantasyxiv | 39210 |
+| 🚀 No Man's Sky | `nms` | nms, nomanssky, no-mans-sky | 275850 |
 
 ## Usage Examples
 
@@ -71,6 +72,11 @@ A custom Redbot cog for fetching and announcing game patch notes from Steam API.
 # Get Final Fantasy XIV patch notes
 [p]patchnotes ffxiv
 [p]patchnotes ff14
+
+# Get No Man's Sky patch notes
+[p]patchnotes nms
+[p]patchnotes nomanssky
+[p]patchnotes no-mans-sky
 
 # Configuration (Admin only)
 [p]patchconfig channel #patch-notes

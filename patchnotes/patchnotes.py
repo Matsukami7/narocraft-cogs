@@ -136,9 +136,11 @@ class PatchCog(commands.Cog):
         """
         if game is None:
             # Show available games
+            prefix = await self.get_prefix(ctx)
+            
             embed = discord.Embed(
                 title="🎮 Available Games",
-                description="Use `^patchnotes <game>` to get patch notes",
+                description=f"Use `{prefix}patchnotes <game>` to get patch notes",
                 color=0x00FF00
             )
             
@@ -155,7 +157,7 @@ class PatchCog(commands.Cog):
             
             embed.add_field(
                 name="Examples",
-                value="`^patchnotes factorio` - Get 3 latest Factorio patch notes\n`^patchnotes factorio 5` - Get 5 latest patch notes",
+                value=f"`{prefix}patchnotes factorio` - Get 3 latest Factorio patch notes\n`{prefix}patchnotes factorio 5` - Get 5 latest patch notes",
                 inline=False
             )
             
@@ -201,6 +203,8 @@ class PatchCog(commands.Cog):
     @commands.command(name="patchhelp")
     async def patch_help(self, ctx):
         """Show help for patch note commands"""
+        prefix = await self.get_prefix(ctx)
+        
         embed = discord.Embed(
             title="🔧 Patch Notes Cog Help",
             description="Commands for fetching game patch notes",
@@ -208,13 +212,13 @@ class PatchCog(commands.Cog):
         )
         
         embed.add_field(
-            name="^patchnotes [game] [count]",
+            name=f"{prefix}patchnotes [game] [count]",
             value="Get latest patch notes for any supported game\n`game`: Game name (e.g., factorio)\n`count`: Number of items (1-10, default: 3)",
             inline=False
         )
         
         embed.add_field(
-            name="^factorio [count]",
+            name=f"{prefix}factorio [count]",
             value="Get latest Factorio patch notes (shortcut)\n`count`: Number of items (1-10, default: 3)",
             inline=False
         )
@@ -230,13 +234,13 @@ class PatchCog(commands.Cog):
         
         embed.add_field(
             name="Examples",
-            value="`^patchnotes` - Show available games\n`^patchnotes factorio` - Get 3 latest Factorio patch notes\n`^patchnotes factorio 5` - Get 5 latest patch notes\n`^factorio` - Shortcut for Factorio",
+            value=f"`{prefix}patchnotes` - Show available games\n`{prefix}patchnotes factorio` - Get 3 latest Factorio patch notes\n`{prefix}patchnotes factorio 5` - Get 5 latest patch notes\n`{prefix}factorio` - Shortcut for Factorio",
             inline=False
         )
         
         await ctx.send(embed=embed)
     
-    @commands.group(name="patchconfig", aliases=["pconfig"])
+    @commands.group(name="patchconfig", aliases=["pconfig", "patchnotesconfig"])
     @commands.guild_only()
     @commands.admin_or_permissions(manage_guild=True)
     async def patch_config(self, ctx):
@@ -337,11 +341,13 @@ class PatchCog(commands.Cog):
             inline=False
         )
         
+        prefix = await self.get_prefix(ctx)
+        
         embed.add_field(
             name="⚙️ Configuration Commands",
-            value="`^patchconfig channel #channel` - Set announcement channel\n"
-                  "`^patchconfig remove` - Remove announcement channel\n"
-                  "`^patchconfig status` - Show this status",
+            value=f"`{prefix}patchconfig channel #channel` - Set announcement channel\n"
+                  f"`{prefix}patchconfig remove` - Remove announcement channel\n"
+                  f"`{prefix}patchconfig status` - Show this status",
             inline=False
         )
         
@@ -353,3 +359,9 @@ class PatchCog(commands.Cog):
         if channel_id:
             return guild.get_channel(channel_id)
         return None
+    
+    async def get_prefix(self, ctx):
+        """Get the bot prefix for the current context"""
+        prefixes = await self.bot.get_valid_prefixes(ctx.guild)
+        # Return the first prefix (usually the primary one)
+        return prefixes[0] if prefixes else "!"

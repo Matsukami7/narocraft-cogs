@@ -15,37 +15,37 @@ A custom Redbot cog for fetching and announcing game patch notes from Steam API.
 
 1. Add this repository to your Redbot:
    ```
-   ^repo add narocraft-cogs <repo_url>
+   [p]repo add narocraft-cogs <repo_url>
    ```
 
 2. Install the cog:
    ```
-   ^cog install narocraft-cogs patchnotes
+   [p]cog install narocraft-cogs patchnotes
    ```
 
 3. Load the cog:
    ```
-   ^load patchnotes
+   [p]load patchnotes
    ```
 
 ## Commands
 
 ### Patch Notes Commands
 
-- **`^patchnotes`** - Show all available games
-- **`^patchnotes <game> [count]`** - Get patch notes for a specific game
+- **`[p]patchnotes`** - Show all available games
+- **`[p]patchnotes <game> [count]`** - Get patch notes for a specific game
   - `game`: Game name (factorio, stellaris, ffxiv, ff14)
   - `count`: Number of patch notes to fetch (1-10, default: 3)
-- **`^factorio [count]`** - Direct shortcut for Factorio patch notes
-- **`^patchhelp`** - Show detailed help for all commands
+- **`[p]factorio [count]`** - Direct shortcut for Factorio patch notes
+- **`[p]patchhelp`** - Show detailed help for all commands
 
 ### Configuration Commands (Admin Only)
 
-- **`^patchconfig`** or **`^pconfig`** - Show current configuration
-- **`^patchconfig channel [#channel]`** - Set announcement channel
+- **`[p]patchconfig`** or **`[p]pconfig`** or **`[p]patchnotesconfig`** - Show current configuration
+- **`[p]patchconfig channel [#channel]`** - Set announcement channel
   - If no channel specified, uses current channel
-- **`^patchconfig remove`** - Remove announcement channel
-- **`^patchconfig status`** - Show detailed configuration status
+- **`[p]patchconfig remove`** - Remove announcement channel
+- **`[p]patchconfig status`** - Show detailed configuration status
 
 ## Supported Games
 
@@ -59,23 +59,23 @@ A custom Redbot cog for fetching and announcing game patch notes from Steam API.
 
 ```
 # Get available games
-^patchnotes
+[p]patchnotes
 
 # Get 3 latest Factorio patch notes
-^patchnotes factorio
-^factorio
+[p]patchnotes factorio
+[p]factorio
 
 # Get 5 latest Stellaris patch notes
-^patchnotes stellaris 5
+[p]patchnotes stellaris 5
 
 # Get Final Fantasy XIV patch notes
-^patchnotes ffxiv
-^patchnotes ff14
+[p]patchnotes ffxiv
+[p]patchnotes ff14
 
 # Configuration (Admin only)
-^patchconfig channel #patch-notes
-^patchconfig status
-^patchconfig remove
+[p]patchconfig channel #patch-notes
+[p]patchconfig status
+[p]patchconfig remove
 ```
 
 ## Permissions Required

@@ -1,4 +1,4 @@
-# Patch Notes Cog
+# GamePatch Notes Cog
 
 A custom Redbot cog for fetching and announcing game patch notes from Steam API. Built as a replacement for paid patch note announcement bots.
 

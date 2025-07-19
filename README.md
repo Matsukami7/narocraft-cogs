@@ -1,1 +1,1 @@
-# narocraft-cogs
+custom cog for fetching game patch notes used in my private discord.

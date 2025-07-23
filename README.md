@@ -6,6 +6,8 @@ A custom Redbot cog for fetching and announcing game patch notes from Steam API.
 
 - **Multi-Game Support**: Currently supports Factorio, Stellaris, Final Fantasy XIV, and No Man's Sky
 - **Unified Commands**: Single command structure for all games
+- **Automatic Announcements**: Background monitoring and auto-posting of new patch notes
+- **Game Subscriptions**: Subscribe to specific games for targeted announcements
 - **Channel Configuration**: Set custom announcement channels per server
 - **Rich Embeds**: Beautiful Discord embeds with game-specific themes
 - **Permission Management**: Admin-only configuration with proper permission checks
@@ -47,6 +49,12 @@ A custom Redbot cog for fetching and announcing game patch notes from Steam API.
 - **`[p]patchconfig remove`** - Remove announcement channel
 - **`[p]patchconfig status`** - Show detailed configuration status
 
+### Auto-Announcement Commands (Admin Only)
+
+- **`[p]patchconfig subscribe <game>`** - Subscribe to automatic announcements for a game
+- **`[p]patchconfig unsubscribe <game>`** - Unsubscribe from automatic announcements for a game
+- **`[p]patchconfig toggle`** - Toggle automatic patch note announcements on/off
+
 ## Supported Games
 
 | Game | Command | Aliases | Steam App ID |
@@ -82,6 +90,12 @@ A custom Redbot cog for fetching and announcing game patch notes from Steam API.
 [p]patchconfig channel #patch-notes
 [p]patchconfig status
 [p]patchconfig remove
+
+# Auto-Announcement Setup (Admin only)
+[p]patchconfig subscribe factorio
+[p]patchconfig subscribe stellaris
+[p]patchconfig toggle
+[p]patchconfig unsubscribe nms
 ```
 
 ## Permissions Required
@@ -105,15 +119,26 @@ A custom Redbot cog for fetching and announcing game patch notes from Steam API.
 
 Per-server settings stored:
 - `announcement_channel`: Channel ID for announcements
-- `subscribed_games`: List of games to monitor (future feature)
-- `auto_announce`: Auto-announcement toggle (future feature)
+- `subscribed_games`: List of games to monitor for auto-announcements
+- `auto_announce`: Auto-announcement toggle (enabled/disabled)
+- `check_interval`: Frequency of patch checking (default: 3600 seconds)
+- `last_patches`: Tracking of last seen patches to prevent duplicates
+
+## Auto-Announcement System
+
+The cog includes a background task that:
+- Checks for new patches every 5 minutes
+- Only announces patches newer than previously seen ones
+- Respects per-server subscription settings
+- Requires proper channel permissions to post
+- Automatically creates rich embeds for announcements
 
 ## Future Features
 
-- Automatic patch note announcements
-- Game subscription management
-- Scheduled checking for new patches
+- Configurable check intervals
 - Support for additional games and RSS feeds
+- Webhook integration for external notifications
+- Advanced filtering options
 
 ## Support
 

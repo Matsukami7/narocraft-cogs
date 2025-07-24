@@ -24,9 +24,10 @@ class PatchCog(commands.Cog):
         # Initialize config
         self.config = Config.get_conf(self, identifier=1234567890)
         default_guild = {
-            "announcement_channel": None,
-            "subscribed_games": [],
-            "auto_announce": False,
+            "announcement_channel": None,  # Default channel for all games
+            "subscribed_games": [],  # List of subscribed game keys
+            "game_channels": {},  # Per-game channel overrides
+            "auto_announce": False,  # Global announcement toggle
             "check_interval": 3600,  # Check every hour by default
             "last_patches": {},  # Store last seen patch timestamps per game
         }
@@ -123,50 +124,73 @@ class PatchCog(commands.Cog):
             except Exception as e:
                 self.logger.error(f"Error checking patches for guild {guild.id}: {e}")
 
-    async def check_game_for_updates(self, guild, channel, game_key, guild_config):
+    async def check_game_for_updates(self, guild, default_channel, game_key, guild_config):
         """Check a specific game for updates and announce if found"""
+        if game_key not in self.games:
+            return
+
+        # Get the last seen timestamp for this game
+        last_seen = guild_config["last_patches"].get(game_key, 0)
+        
+        # Fetch latest patches
+        success, result = await self.get_patch_notes(game_key, 5)  # Get last 5 patches
+        
+        if not success:
+            self.logger.warning(f"Failed to fetch patches for {game_key} in guild {guild.id}")
+            return
+
+        # Filter for new patches
+        new_patches = [
+            item for item in result["news_items"]
+            if item["date"] > last_seen
+        ]
+
+        if not new_patches:
+            return  # No new patches
+
+        # Sort by date (oldest first)
+        new_patches.sort(key=lambda x: x["date"])
+        
+        # Update last seen timestamp
+        last_seen = new_patches[-1]["date"]
+        last_patches = guild_config["last_patches"]
+        last_patches[game_key] = last_seen
+        await self.config.guild(guild).last_patches.set(last_patches)
+
+        # Create announcement embed
+        game_info = self.games[game_key]
+        embed = self.create_announcement_embed(game_info, new_patches)
+        
+        # Get the target channel (per-game or default)
+        game_channels = await self.config.guild(guild).game_channels()
+        channel_id = game_channels.get(game_key) or default_channel.id
+        
+        # Get the channel object
+        target_channel = guild.get_channel(channel_id)
+        if not target_channel:
+            self.logger.warning(
+                f"Could not find channel {channel_id} for game {game_key} in guild {guild.id}"
+            )
+            return
+            
+        # Check permissions
+        if not target_channel.permissions_for(guild.me).send_messages:
+            self.logger.warning(
+                f"No permission to send messages in channel {target_channel.id} for guild {guild.id}"
+            )
+            return
+
+        # Send the announcement
         try:
-            success, result = await self.get_patch_notes(game_key, 5)
-
-            if not success:
-                return
-
-            news_items = result["news_items"]
-            if not news_items:
-                return
-
-            last_patches = guild_config.get("last_patches", {})
-            last_seen_timestamp = last_patches.get(game_key, 0)
-
-            # Find new patches (those with timestamps newer than last seen)
-            new_patches = [
-                item for item in news_items if item["date"] > last_seen_timestamp
-            ]
-
-            if not new_patches:
-                return
-
-            # Update the last seen timestamp
-            newest_timestamp = max(item["date"] for item in new_patches)
-            last_patches[game_key] = newest_timestamp
-            await self.config.guild(guild).last_patches.set(last_patches)
-
-            # Create and send announcement
-            game_info = result["game_info"]
-            embed = self.create_announcement_embed(game_info, new_patches)
-
-            try:
-                await channel.send(
-                    f"🔔 **New {game_info['name']} patch notes are available!**",
-                    embed=embed,
-                )
-                self.logger.info(
-                    f"Announced {len(new_patches)} new patches for {game_key} in guild {guild.id}"
-                )
-            except discord.HTTPException as e:
-                self.logger.error(
-                    f"Failed to send announcement in guild {guild.id}: {e}"
-                )
+            await target_channel.send(embed=embed)
+            self.logger.info(
+                f"Announced {len(new_patches)} new patches for {game_key} "
+                f"in channel {target_channel.id} (guild {guild.id})"
+            )
+        except Exception as e:
+            self.logger.error(
+                f"Failed to send announcement for {game_key} in guild {guild.id}: {e}"
+            )
 
         except Exception as e:
             self.logger.error(
@@ -377,42 +401,96 @@ class PatchCog(commands.Cog):
 
     @commands.command(name="patchhelp")
     async def patch_help(self, ctx):
-        """Show help for patch note commands"""
+        """Show detailed help for patch note commands and configuration"""
         prefix = await self.get_prefix(ctx)
 
         embed = discord.Embed(
-            title="🔧 Patch Notes Cog Help",
-            description="Commands for fetching game patch notes",
-            color=0x00FF00,
+            title="🔧 Patch Notes Cog - Complete Guide",
+            description=(
+                "A comprehensive guide to using the Patch Notes cog. "
+                "This cog allows you to fetch and automatically post game patch notes."
+            ),
+            color=0x00AAFF,
         )
 
+        # Basic Commands
         embed.add_field(
-            name=f"{prefix}patchnotes [game] [count]",
-            value="Get latest patch notes for any supported game\n`game`: Game name (e.g., factorio)\n`count`: Number of items (1-10, default: 3)",
-            inline=False,
-        )
-
-        embed.add_field(
-            name=f"{prefix}factorio [count]",
-            value="Get latest Factorio patch notes (shortcut)\n`count`: Number of items (1-10, default: 3)",
-            inline=False,
-        )
-
-        embed.add_field(
-            name="Available Games",
-            value="\n".join(
-                [
-                    f"{info['emoji']} **{info['name']}** - `{key}`"
-                    for key, info in self.games.items()
-                ]
+            name="📜 Basic Commands",
+            value=(
+                f"`{prefix}patchnotes [game] [count]`\n"
+                "• Fetch patch notes for any supported game\n"
+                "• `game`: The game name (e.g., factorio)\n"
+                "• `count`: Number of patch notes to fetch (1-10, default: 3)\n\n"
+                f"`{prefix}factorio [count]`\n"
+                "• Shortcut for Factorio patch notes\n"
+                "• `count`: Number of patch notes to fetch (1-10, default: 3)"
             ),
             inline=False,
         )
 
+        # Auto-Announcement Commands
         embed.add_field(
-            name="Examples",
-            value=f"`{prefix}patchnotes` - Show available games\n`{prefix}patchnotes factorio` - Get 3 latest Factorio patch notes\n`{prefix}patchnotes factorio 5` - Get 5 latest patch notes\n`{prefix}factorio` - Shortcut for Factorio",
+            name="🔔 Auto-Announcement Commands (Admin Only)",
+            value=(
+                f"`{prefix}patchconfig channel [#channel]`\n"
+                "• Set the default announcement channel\n"
+                "• Omit channel to use current channel\n\n"
+                f"`{prefix}patchconfig subscribe <game> [#channel]`\n"
+                "• Subscribe to automatic patch notes for a game\n"
+                "• Optionally specify a channel for this game\n\n"
+                f"`{prefix}patchconfig unsubscribe <game>`\n"
+                "• Unsubscribe from a game's automatic updates\n\n"
+                f"`{prefix}patchconfig toggle`\n"
+                "• Toggle auto-announcements on/off\n\n"
+                f"`{prefix}patchconfig status`\n"
+                "• Show current configuration"
+            ),
             inline=False,
+        )
+
+        # Available Games
+        games_list = []
+        for key, info in self.games.items():
+            aliases = ", ".join([f"`{a}`" for a in info.get("aliases", [])])
+            games_list.append(f"{info['emoji']} **{info['name']}** - `{key}` {aliases}")
+
+        embed.add_field(
+            name="🎮 Available Games",
+            value="\n".join(games_list),
+            inline=False,
+        )
+
+        # Examples
+        examples = [
+            f"`{prefix}patchnotes` - Show available games",
+            f"`{prefix}patchnotes factorio` - Get Factorio patch notes",
+            f"`{prefix}patchconfig #patch-notes` - Set announcement channel",
+            f"`{prefix}patchconfig subscribe factorio #factorio-news` - Subscribe to Factorio updates",
+            f"`{prefix}patchconfig unsubscribe stellaris` - Stop Stellaris updates",
+            f"`{prefix}patchconfig status` - View current settings"
+        ]
+
+        embed.add_field(
+            name="💡 Examples",
+            value="\n".join(examples),
+            inline=False,
+        )
+
+        # Auto-Announcement Info
+        embed.add_field(
+            name="ℹ️ Auto-Announcement Features",
+            value=(
+                "• Checks for new patches every 5 minutes\n"
+                "• Posts only new patches since last check\n"
+                "• Supports per-game announcement channels\n"
+                "• Beautiful, game-themed embeds\n"
+                "• Configurable per server"
+            ),
+            inline=False,
+        )
+
+        embed.set_footer(
+            text=f"Use {prefix}patchhelp for this help menu • Bot prefix: {prefix}"
         )
 
         await ctx.send(embed=embed)
@@ -466,36 +544,47 @@ class PatchCog(commands.Cog):
         await ctx.send(embed=embed)
 
     @patch_config.command(name="subscribe")
-    async def subscribe_game(self, ctx, game: Optional[str] = None):
+    async def subscribe_game(self, ctx, game: Optional[str] = None, channel: Optional[discord.TextChannel] = None):
         """Subscribe to patch notes for a specific game
 
         Parameters:
         game: The game to subscribe to (e.g., factorio)
+        channel: (Optional) Specific channel for this game's announcements
         """
         if game is None:
             # Show available games
             embed = discord.Embed(
                 title="🎮 Subscribe to Game Patch Notes",
-                description="Choose a game to subscribe to for automatic announcements",
+                description=(
+                    "Subscribe to automatic patch notes for supported games.\n"
+                    "You can specify a channel for each game's announcements."
+                ),
                 color=0x0099FF,
             )
 
-            games_list = "\n".join(
-                [
-                    f"{info['emoji']} **{info['name']}** - `{key}`"
-                    for key, info in self.games.items()
-                ]
-            )
+            games_list = []
+            for key, info in self.games.items():
+                alias_text = f" (aliases: {', '.join(info['aliases'])})" if info.get('aliases') else ""
+                games_list.append(f"{info['emoji']} **{info['name']}** - `{key}`{alias_text}")
 
-            embed.add_field(name="Available Games", value=games_list, inline=False)
+            embed.add_field(
+                name="Available Games",
+                value="\n".join(games_list),
+                inline=False
+            )
 
             prefix = await self.get_prefix(ctx)
             embed.add_field(
                 name="Usage",
-                value=f"`{prefix}patchconfig subscribe <game>`\nExample: `{prefix}patchconfig subscribe factorio`",
+                value=(
+                    f"`{prefix}patchconfig subscribe <game> [#channel]`\n"
+                    f"• Subscribe to a game's patch notes\n"
+                    f"• Optionally specify a channel for this game's announcements\n\n"
+                    f"Example: `{prefix}patchconfig subscribe factorio #factorio-news`\n"
+                    f"Example: `{prefix}patchconfig subscribe stellaris` (uses default channel)"
+                ),
                 inline=False,
             )
-
             await ctx.send(embed=embed)
             return
 
@@ -515,38 +604,78 @@ class PatchCog(commands.Cog):
             )
             return
 
-        # Get current subscriptions
-        subscribed_games = await self.config.guild(ctx.guild).subscribed_games()
+        # Get current configuration
+        guild_config = self.config.guild(ctx.guild)
+        subscribed_games = await guild_config.subscribed_games()
+        game_channels = await guild_config.game_channels()
 
         if game_key in subscribed_games:
             game_info = self.games[game_key]
+            current_channel = game_channels.get(game_key)
+            channel_mention = f" in {ctx.guild.get_channel(current_channel).mention}" if current_channel else ""
             await ctx.send(
-                f"⚠️ This server is already subscribed to **{game_info['name']}** patch notes."
+                f"⚠️ This server is already subscribed to **{game_info['name']}** patch notes{channel_mention}."
             )
             return
 
         # Add the subscription
         subscribed_games.append(game_key)
-        await self.config.guild(ctx.guild).subscribed_games.set(subscribed_games)
+        await guild_config.subscribed_games.set(subscribed_games)
+
+        # Store channel override if provided
+        if channel:
+            game_channels[game_key] = channel.id
+            await guild_config.game_channels.set(game_channels)
 
         game_info = self.games[game_key]
+        channel_mention = f" in {channel.mention}" if channel else ""
+        
         embed = discord.Embed(
             title="✅ Subscription Added",
-            description=f"This server is now subscribed to **{game_info['emoji']} {game_info['name']}** patch notes!",
+            description=(
+                f"This server is now subscribed to **{game_info['emoji']} {game_info['name']}** "
+                f"patch notes{channel_mention}!"
+            ),
             color=0x00FF00,
         )
 
         # Initialize last seen timestamp with current latest patch
         success, result = await self.get_patch_notes(game_key, 1)
         if success and result["news_items"]:
-            last_patches = await self.config.guild(ctx.guild).last_patches()
+            last_patches = await guild_config.last_patches()
             last_patches[game_key] = result["news_items"][0]["date"]
-            await self.config.guild(ctx.guild).last_patches.set(last_patches)
-            embed.add_field(
-                name="📋 Note",
-                value="You'll receive announcements for patches released after this subscription.",
-                inline=False,
-            )
+            await guild_config.last_patches.set(last_patches)
+            
+            if not channel:
+                default_channel = await guild_config.announcement_channel()
+                if not default_channel:
+                    embed.add_field(
+                        name="⚠️ Note",
+                        value=(
+                            "No default announcement channel is set! "
+                            f"Use `{await self.get_prefix(ctx)}patchconfig channel #channel` to set one."
+                        ),
+                        inline=False,
+                    )
+                else:
+                    embed.add_field(
+                        name="ℹ️ Note",
+                        value=(
+                            f"Using the default announcement channel. "
+                            f"To set a specific channel for {game_info['name']}, use: "
+                            f"`{await self.get_prefix(ctx)}patchconfig subscribe {game_key} #channel`"
+                        ),
+                        inline=False,
+                    )
+            else:
+                embed.add_field(
+                    name="📋 Note",
+                    value=(
+                        f"{game_info['name']} patch notes will be posted to {channel.mention}. "
+                        f"You'll receive announcements for patches released after this subscription."
+                    ),
+                    inline=False,
+                )
 
         await ctx.send(embed=embed)
 

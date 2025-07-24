@@ -44,16 +44,42 @@ A custom Redbot cog for fetching and announcing game patch notes from Steam API.
 ### Configuration Commands (Admin Only)
 
 - **`[p]patchconfig`** or **`[p]pconfig`** or **`[p]patchnotesconfig`** - Show current configuration
-- **`[p]patchconfig channel [#channel]`** - Set announcement channel
+- **`[p]patchconfig channel [#channel]`** - Set default announcement channel
   - If no channel specified, uses current channel
 - **`[p]patchconfig remove`** - Remove announcement channel
 - **`[p]patchconfig status`** - Show detailed configuration status
 
 ### Auto-Announcement Commands (Admin Only)
 
-- **`[p]patchconfig subscribe <game>`** - Subscribe to automatic announcements for a game
+- **`[p]patchconfig subscribe <game> [#channel]`** - Subscribe to automatic announcements for a game
+  - `game`: The game to subscribe to (e.g., factorio, stellaris)
+  - `channel`: (Optional) Specific channel for this game's announcements
+  - Example: `[p]patchconfig subscribe factorio #factorio-news`
 - **`[p]patchconfig unsubscribe <game>`** - Unsubscribe from automatic announcements for a game
 - **`[p]patchconfig toggle`** - Toggle automatic patch note announcements on/off
+
+### Per-Game Channel Configuration
+
+You can specify different announcement channels for each game:
+
+1. **Default Channel**: Set with `[p]patchconfig channel #general`
+   - Used when no per-game channel is specified
+   - Fallback if a game's specific channel is deleted
+
+2. **Game-Specific Channels**: Set when subscribing to a game
+   - Example: `[p]patchconfig subscribe factorio #factorio-updates`
+   - Overrides the default channel for that specific game
+   - To change a game's channel, simply resubscribe with the new channel
+
+3. **Mixed Configuration**: Use default for some games, specific channels for others
+   - Example:
+     ```
+     [p]patchconfig channel #gaming
+     [p]patchconfig subscribe stellaris
+     [p]patchconfig subscribe factorio #factorio-news
+     ```
+   - Stellaris announcements go to #gaming
+   - Factorio announcements go to #factorio-news
 
 ## Supported Games
 
@@ -130,8 +156,24 @@ The cog includes a background task that:
 - Checks for new patches every 5 minutes
 - Only announces patches newer than previously seen ones
 - Respects per-server subscription settings
+- Supports per-game announcement channels
 - Requires proper channel permissions to post
 - Automatically creates rich embeds for announcements
+- Provides detailed logging for troubleshooting
+
+## Getting Help
+
+For detailed command help and examples, use:
+```
+[p]patchhelp
+```
+
+This will show you:
+- Complete command reference
+- Available game shortcuts
+- Configuration examples
+- Auto-announcement settings
+- Per-game channel configuration
 
 ## Future Features
 

@@ -36,7 +36,7 @@ A custom Redbot cog for fetching and announcing game patch notes from Steam API.
 
 - **`[p]patchnotes`** - Show all available games
 - **`[p]patchnotes <game> [count]`** - Get patch notes for a specific game
-  - `game`: Game name (factorio, stellaris, ffxiv, ff14)
+  - `game`: Game name (factorio, stellaris, ffxiv, ff14, pathofexile, poe, pathofexile2, poe2)
   - `count`: Number of patch notes to fetch (1-10, default: 3)
 - **`[p]factorio [count]`** - Direct shortcut for Factorio patch notes
 - **`[p]patchhelp`** - Show detailed help for all commands
@@ -85,10 +85,12 @@ You can specify different announcement channels for each game:
 
 | Game | Command | Aliases | Steam App ID |
 |------|---------|---------|-------------|
-| 🏭 Factorio | `factorio` | factorio | 427520 |
-| 🌌 Stellaris | `stellaris` | stellaris | 281990 |
-| ⚔️ Final Fantasy XIV | `ffxiv` | ffxiv, ff14, finalfantasy14, finalfantasyxiv | 39210 |
-| 🚀 No Man's Sky | `nms` | nms, nomanssky, no-mans-sky | 275850 |
+| 🏭 Factorio | `[p]factorio` | factorio | 427520 |
+| 🌌 Stellaris | `[p]stellaris` | stellaris | 281990 |
+| ⚔️ Final Fantasy XIV | `[p]ffxiv` | ffxiv, ff14, finalfantasy14, finalfantasyxiv | 39210 |
+| 🚀 No Man's Sky | `[p]nms` | nms, nomanssky, no-mans-sky | 275850 |
+| Path of Exile | `[p]pathofexile` | poe, poe1 | 238960 |
+| Path of Exile 2 | `[p]pathofexile2` | poe2 | 238960 |
 
 ## Usage Examples
 

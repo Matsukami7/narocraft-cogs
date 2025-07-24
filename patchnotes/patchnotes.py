@@ -66,6 +66,20 @@ class PatchCog(commands.Cog):
                 "color": 0xFF1493,  # Deep Pink
                 "aliases": ["nms", "nomanssky", "no-mans-sky"],
             },
+            "pathofexile": {
+                "appid": "238960",
+                "name": "Path of Exile",
+                "emoji": "⚔️",
+                "color": 0x8B4513,  # Saddle Brown
+                "aliases": ["poe", "pathofexile1", "poe1", "path of exile"],
+            },
+            "pathofexile2": {
+                "appid": "238960",  # Same as PoE 1 for now, may need update
+                "name": "Path of Exile 2",
+                "emoji": "⚔️",
+                "color": 0x8B4513,  # Saddle Brown
+                "aliases": ["poe2", "pathofexile2", "poe 2", "path of exile 2"],
+            },
         }
 
     def cog_unload(self):

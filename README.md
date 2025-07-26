@@ -180,10 +180,45 @@ This will show you:
 ## Future Features
 
 - Configurable check intervals
-- Support for additional games and RSS feeds
+- Support for additional games. (would like to add this ability to the cog itself, and it not be hard coded)
 - Webhook integration for external notifications
 - Advanced filtering options
 
 ## Support
 
-If you encounter any issues or have feature requests, please create an issue in the repository.
+If you encounter any issues or have feature requests, please create an issue on this repo.
+
+
+##Disclaimer
+
+This cog is not affiliated with any game developers, and is not endorsed by them. It is a community-driven project.
+By using this cog/software you accept the risk of using it, and the cog author is not responsible for any issues that may arise from using it.
+By using this cog/software you agree that you have read and understand the license and disclaimer, and that running foreign code found on the internet is at your own risk.
+
+
+## License
+
+This project is licensed under the GNU General Public License v3.0 (GPL-3.0). This means:
+
+- You are free to use, modify, and distribute this software
+- You must disclose the source code of any modified versions
+- Modified versions must also be licensed under the GPL-3.0
+- All original copyright notices and disclaimers must be preserved
+
+```
+GamePatch Notes Cog - A custom Redbot cog for fetching and announcing game patch notes
+Copyright (C) 2024
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+```

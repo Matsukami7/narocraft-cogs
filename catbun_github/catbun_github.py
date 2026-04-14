@@ -522,7 +522,10 @@ class CatbunGithub(commands.Cog):
 
                 # Brief pause — Discord needs a moment before the thread accepts messages
                 await asyncio.sleep(1)
-                await thread.send(f"✅ Logged by {ctx.author.mention} → {issue_url}")
+                await thread.send(
+                    "✅ Thanks for your report! We've received it and will look into it. "
+                    "You'll see updates in this thread if we need more info."
+                )
 
                 try:
                     await ctx.message.add_reaction("✅")

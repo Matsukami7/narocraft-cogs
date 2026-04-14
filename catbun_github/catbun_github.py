@@ -146,12 +146,18 @@ class CatbunGithub(commands.Cog):
 
     @commands.command(name="bug")
     async def bug_command(self, ctx: commands.Context, *, description: str):
-        """Report a bug. Usage: ^bug <description>"""
+        """Report a bug (Developer only). Usage: ^bug <description>"""
+        dev_role_name = await self.config.dev_role_name()
+        if not any(r.name == dev_role_name for r in ctx.author.roles):
+            return
         await self._handle_command_report(ctx, description, "bug")
 
     @commands.command(name="feature")
     async def feature_command(self, ctx: commands.Context, *, description: str):
-        """Suggest a feature. Usage: ^feature <description>"""
+        """Suggest a feature (Developer only). Usage: ^feature <description>"""
+        dev_role_name = await self.config.dev_role_name()
+        if not any(r.name == dev_role_name for r in ctx.author.roles):
+            return
         await self._handle_command_report(ctx, description, "feature-request")
 
     # -------------------------------------------------------------------------

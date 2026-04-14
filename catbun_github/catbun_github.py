@@ -257,7 +257,7 @@ class CatbunGithub(commands.Cog):
         # Only handle forum posts (parent is a forum channel, type 15)
         if not thread.parent or thread.parent.type != discord.ChannelType.forum:
             return
-        if thread.owner and thread.owner.bot:
+        if thread.owner_id == self.bot.user.id:
             return
 
         bug_ids  = await self.config.bug_channel_ids()
@@ -475,8 +475,20 @@ class CatbunGithub(commands.Cog):
 
     async def _handle_command_report(self, ctx: commands.Context,
                                      description: str, report_type: str):
-        """Auto-create a GitHub issue from a ^bug or ^feature command."""
+        """Create a forum thread + GitHub issue from ^bug or ^feature command."""
         title = (description[:77] + "...") if len(description) > 80 else description
+
+        # Find the first configured forum channel for this report type
+        channel_ids = (
+            await self.config.bug_channel_ids()
+            if report_type == "bug"
+            else await self.config.feature_channel_ids()
+        )
+        forum_channel = next(
+            (self.bot.get_channel(cid) for cid in channel_ids
+             if isinstance(self.bot.get_channel(cid), discord.ForumChannel)),
+            None,
+        )
 
         body = self._build_body(
             report_type=report_type,
@@ -493,11 +505,33 @@ class CatbunGithub(commands.Cog):
         issue_url = await self._create_github_issue(title, body, labels)
 
         if issue_url:
-            await ctx.message.add_reaction("✅")
-            await ctx.send(
-                f"✅ Thanks {ctx.author.mention}! Your report has been received and logged. We'll look into it!",
-                delete_after=30,
-            )
+            issue_number = int(issue_url.rstrip("/").split("/")[-1])
+
+            if forum_channel:
+                # Create a bot-owned forum thread (on_thread_create skips bot threads)
+                thread = await forum_channel.create_thread(
+                    name=title,
+                    content=f"**Reported by:** {ctx.author.display_name}\n\n{description}",
+                )
+                # Store thread → issue mapping for ^resolve and GitHub sync
+                thread_issues = await self.config.thread_issues()
+                thread_issues[str(thread.id)] = issue_number
+                await self.config.thread_issues.set(thread_issues)
+
+                await thread.send(f"✅ Logged by {ctx.author.mention} → {issue_url}")
+                await ctx.message.add_reaction("✅")
+                await ctx.send(
+                    f"✅ Created {thread.mention} and logged to GitHub.",
+                    delete_after=15,
+                )
+            else:
+                # No forum channel configured — confirm in place
+                await ctx.message.add_reaction("✅")
+                await ctx.send(
+                    f"✅ Logged to GitHub → {issue_url}",
+                    delete_after=30,
+                )
+
             await self._post_to_log(report_type, "source:discord", title, issue_url)
         else:
             await ctx.send(

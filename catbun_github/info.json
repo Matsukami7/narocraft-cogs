@@ -8,6 +8,6 @@
     "min_bot_version": "3.5.0",
     "min_python_version": [3, 8, 0],
     "author": ["Lone Pixel Studios"],
-    "install_msg": "CatbunGithub loaded!\n\nConfigure with:\n  [p]cbgithub setrepo owner/repo\n  [p]cbgithub settoken YOUR_GITHUB_TOKEN\n  [p]cbgithub addbugchannel #channel\n  [p]cbgithub addfeaturechannel #channel\n  [p]cbgithub addingamechannel #channel\n  [p]cbgithub setlogchannel #channel\n  [p]cbgithub settings",
+    "install_msg": "CatbunGithub loaded!\n\nConfigure with:\n  [p]cbgithub setrepo owner/repo\n  [p]cbgithub settoken YOUR_GITHUB_TOKEN\n  [p]cbgithub addbugchannel #channel\n  [p]cbgithub addfeaturechannel #channel\n  [p]cbgithub addtriagechannel #channel\n  [p]cbgithub setlogchannel #channel\n  [p]cbgithub settings",
     "requirements": ["aiohttp"]
 }

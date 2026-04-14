@@ -206,11 +206,15 @@ class CatbunGithub(commands.Cog):
         issue_url = await self._create_github_issue(title, body, labels)
 
         if issue_url:
-            await thread.send(f"📋 Logged → {issue_url}")
+            await thread.send(
+                "✅ Thanks for your report! We've received it and will look into it. "
+                "You'll see updates in this thread if we need more info."
+            )
             await self._post_to_log(report_type, "source:discord", title, issue_url)
         else:
             await thread.send(
-                "❌ Failed to create GitHub issue. Check bot configuration.",
+                "⚠️ Something went wrong logging your report. Please try again or "
+                "contact a moderator."
             )
 
     # -------------------------------------------------------------------------
@@ -391,13 +395,13 @@ class CatbunGithub(commands.Cog):
         if issue_url:
             await ctx.message.add_reaction("✅")
             await ctx.send(
-                f"✅ Thanks {ctx.author.mention}! Logged → {issue_url}",
+                f"✅ Thanks {ctx.author.mention}! Your report has been received and logged. We'll look into it!",
                 delete_after=30,
             )
             await self._post_to_log(report_type, "source:discord", title, issue_url)
         else:
             await ctx.send(
-                "❌ Failed to create GitHub issue. Check bot configuration.",
+                "⚠️ Something went wrong logging your report. Please try again or contact a moderator.",
                 delete_after=15,
             )
 

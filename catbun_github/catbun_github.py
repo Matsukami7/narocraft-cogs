@@ -509,10 +509,12 @@ class CatbunGithub(commands.Cog):
 
             if forum_channel:
                 # Create a bot-owned forum thread (on_thread_create skips bot threads)
-                thread = await forum_channel.create_thread(
+                # create_thread returns ThreadWithMessage — extract .thread
+                result = await forum_channel.create_thread(
                     name=title,
                     content=f"**Reported by:** {ctx.author.display_name}\n\n{description}",
                 )
+                thread = result.thread
                 # Store thread → issue mapping for ^resolve and GitHub sync
                 thread_issues = await self.config.thread_issues()
                 thread_issues[str(thread.id)] = issue_number

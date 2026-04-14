@@ -29,6 +29,7 @@ import asyncio
 import aiohttp
 import discord
 from datetime import datetime, timezone
+from discord.ext import tasks
 from redbot.core import commands, Config
 from redbot.core.bot import Red
 
@@ -51,7 +52,60 @@ class CatbunGithub(commands.Cog):
             log_channel_id=None,
             dev_role_name="Developer",
             thread_issues={},        # thread_id (str) → github issue number (int)
+            last_github_sync=None,   # ISO timestamp of last closed-issue poll
         )
+        self.poll_github_closed.start()
+
+    def cog_unload(self):
+        self.poll_github_closed.cancel()
+
+    # -------------------------------------------------------------------------
+    # Background task — poll GitHub for closed issues every 5 minutes
+    # -------------------------------------------------------------------------
+
+    @tasks.loop(minutes=5)
+    async def poll_github_closed(self):
+        """Check GitHub for issues closed since the last poll and lock matching threads."""
+        token = await self.config.github_token()
+        repo  = await self.config.github_repo()
+        if not token or not repo:
+            return
+
+        now       = datetime.now(timezone.utc)
+        last_sync = await self.config.last_github_sync()
+
+        # First run after deploy — record timestamp and skip to avoid mass-closing old threads
+        if last_sync is None:
+            await self.config.last_github_sync.set(now.isoformat())
+            return
+
+        closed_numbers = await self._fetch_closed_issues_since(token, repo, last_sync)
+
+        if closed_numbers:
+            thread_issues  = await self.config.thread_issues()
+            issue_to_thread = {v: k for k, v in thread_issues.items()}
+
+            for issue_number in closed_numbers:
+                thread_id_str = issue_to_thread.get(issue_number)
+                if not thread_id_str:
+                    continue
+                thread = self.bot.get_channel(int(thread_id_str))
+                if not thread or not isinstance(thread, discord.Thread):
+                    continue
+                if thread.archived or thread.locked:
+                    continue  # already closed
+
+                await thread.send(
+                    f"🔒 Issue #{issue_number} was closed on GitHub. "
+                    f"This thread has been locked."
+                )
+                await thread.edit(locked=True, archived=True)
+
+        await self.config.last_github_sync.set(now.isoformat())
+
+    @poll_github_closed.before_loop
+    async def before_poll(self):
+        await self.bot.wait_until_ready()
 
     # -------------------------------------------------------------------------
     # Admin setup commands
@@ -496,6 +550,28 @@ class CatbunGithub(commands.Cog):
                     text = await resp.text()
                     print(f"[CatbunGithub] GitHub API error {resp.status}: {text}")
                     return None
+
+    async def _fetch_closed_issues_since(self, token: str, repo: str,
+                                          since_iso: str) -> list[int]:
+        """Return issue numbers that are closed and were updated since since_iso."""
+        url = f"https://api.github.com/repos/{repo}/issues"
+        headers = {
+            "Authorization": f"token {token}",
+            "Accept": "application/vnd.github.v3+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+        }
+        params = {"state": "closed", "since": since_iso, "per_page": 100}
+
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, headers=headers, params=params) as resp:
+                if resp.status != 200:
+                    return []
+                data = await resp.json()
+                return [
+                    issue["number"] for issue in data
+                    if issue.get("state") == "closed"
+                    and not issue.get("pull_request")  # exclude PRs
+                ]
 
     async def _close_github_issue(self, issue_number: int,
                                    resolver: str, reason: str) -> bool:

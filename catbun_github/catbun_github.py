@@ -50,6 +50,7 @@ class CatbunGithub(commands.Cog):
             triage_channel_ids=[],   # in-game reports — held for Developer reaction
             log_channel_id=None,
             dev_role_name="Developer",
+            thread_issues={},        # thread_id (str) → github issue number (int)
         )
 
     # -------------------------------------------------------------------------
@@ -90,7 +91,7 @@ class CatbunGithub(commands.Cog):
         if channel_id not in ids:
             ids.append(channel_id)
             await self.config.feature_channel_ids.set(ids)
-        await ctx.send(f"✅ Watching {channel.mention} for feature requests (auto mode).")
+        await ctx.send(f"✅ Watching <#{channel_id}> for feature requests (forum mode).")
 
     @cbgithub.command(name="addtriagechannel")
     async def add_triage_channel(self, ctx: commands.Context, channel: discord.TextChannel):
@@ -160,6 +161,39 @@ class CatbunGithub(commands.Cog):
             return
         await self._handle_command_report(ctx, description, "feature-request")
 
+    @commands.command(name="resolve")
+    async def resolve_command(self, ctx: commands.Context, *, reason: str = "Resolved"):
+        """Mark a bug/feature thread as resolved (Developer only). Closes the GitHub issue and locks the thread."""
+        dev_role_name = await self.config.dev_role_name()
+        if not any(r.name == dev_role_name for r in ctx.author.roles):
+            return
+
+        if not isinstance(ctx.channel, discord.Thread) or not ctx.channel.parent_id:
+            await ctx.send("This command must be used inside a forum thread.", delete_after=10)
+            return
+
+        thread = ctx.channel
+        bug_ids  = await self.config.bug_channel_ids()
+        feat_ids = await self.config.feature_channel_ids()
+
+        if thread.parent_id not in bug_ids and thread.parent_id not in feat_ids:
+            await ctx.send("This thread is not a tracked bug/feature thread.", delete_after=10)
+            return
+
+        thread_issues = await self.config.thread_issues()
+        issue_number  = thread_issues.get(str(thread.id))
+
+        github_msg = ""
+        if issue_number:
+            success = await self._close_github_issue(issue_number, ctx.author.display_name, reason)
+            github_msg = f"\n• GitHub issue #{issue_number} closed." if success else "\n• (Could not close GitHub issue — check bot config.)"
+
+        await thread.send(
+            f"✅ **Resolved** by {ctx.author.display_name}: {reason}{github_msg}\n\n"
+            f"*This thread has been locked.*"
+        )
+        await thread.edit(locked=True, archived=True)
+
     # -------------------------------------------------------------------------
     # Forum listener — fires when a new post is created in a forum channel
     # -------------------------------------------------------------------------
@@ -212,6 +246,12 @@ class CatbunGithub(commands.Cog):
         issue_url = await self._create_github_issue(title, body, labels)
 
         if issue_url:
+            # Store thread → issue number mapping for ^resolve
+            issue_number = int(issue_url.rstrip("/").split("/")[-1])
+            thread_issues = await self.config.thread_issues()
+            thread_issues[str(thread.id)] = issue_number
+            await self.config.thread_issues.set(thread_issues)
+
             await thread.send(
                 "✅ Thanks for your report! We've received it and will look into it. "
                 "You'll see updates in this thread if we need more info."
@@ -456,6 +496,36 @@ class CatbunGithub(commands.Cog):
                     text = await resp.text()
                     print(f"[CatbunGithub] GitHub API error {resp.status}: {text}")
                     return None
+
+    async def _close_github_issue(self, issue_number: int,
+                                   resolver: str, reason: str) -> bool:
+        """Close a GitHub issue and post a closing comment."""
+        token = await self.config.github_token()
+        repo  = await self.config.github_repo()
+        if not token or not repo:
+            return False
+
+        base = f"https://api.github.com/repos/{repo}/issues/{issue_number}"
+        headers = {
+            "Authorization": f"token {token}",
+            "Accept": "application/vnd.github.v3+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+        }
+
+        async with aiohttp.ClientSession() as session:
+            # Post a closing comment
+            await session.post(
+                f"{base}/comments",
+                headers=headers,
+                json={"body": f"**Resolved** by {resolver}: {reason}\n\n*Closed via Discord.*"},
+            )
+            # Close the issue
+            async with session.patch(
+                base,
+                headers=headers,
+                json={"state": "closed", "state_reason": "completed"},
+            ) as resp:
+                return resp.status == 200
 
     async def _post_to_log(self, report_type: str, source: str,
                            title: str, issue_url: str):

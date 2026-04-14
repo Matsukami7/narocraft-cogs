@@ -75,29 +75,26 @@ class CatbunGithub(commands.Cog):
         await ctx.send(f"✅ GitHub repo set to `{repo}`.")
 
     @cbgithub.command(name="addbugchannel")
-    async def add_bug_channel(self, ctx: commands.Context, channel: discord.TextChannel):
-        """Watch a channel for bug reports (auto-creates issue on every message)."""
+    async def add_bug_channel(self, ctx: commands.Context, channel_id: int):
+        """Watch a forum channel for bug reports. Pass the channel ID (right-click channel → Copy ID)."""
         ids = await self.config.bug_channel_ids()
-        if channel.id not in ids:
-            ids.append(channel.id)
+        if channel_id not in ids:
+            ids.append(channel_id)
             await self.config.bug_channel_ids.set(ids)
-        await ctx.send(f"✅ Watching {channel.mention} for bug reports (auto mode).")
+        await ctx.send(f"✅ Watching <#{channel_id}> for bug reports (forum mode).")
 
     @cbgithub.command(name="addfeaturechannel")
-    async def add_feature_channel(self, ctx: commands.Context, channel: discord.TextChannel):
-        """Watch a channel for feature requests (auto-creates issue on every message)."""
+    async def add_feature_channel(self, ctx: commands.Context, channel_id: int):
+        """Watch a forum channel for feature requests. Pass the channel ID (right-click channel → Copy ID)."""
         ids = await self.config.feature_channel_ids()
-        if channel.id not in ids:
-            ids.append(channel.id)
+        if channel_id not in ids:
+            ids.append(channel_id)
             await self.config.feature_channel_ids.set(ids)
         await ctx.send(f"✅ Watching {channel.mention} for feature requests (auto mode).")
 
     @cbgithub.command(name="addtriagechannel")
     async def add_triage_channel(self, ctx: commands.Context, channel: discord.TextChannel):
-        """
-        Watch a channel in triage mode (in-game reports).
-        Developer must react ✅ to create a GitHub Issue, ❌ to dismiss.
-        """
+        """Watch a text channel in triage mode. Developer reacts ✅ to log, ❌ to dismiss."""
         ids = await self.config.triage_channel_ids()
         if channel.id not in ids:
             ids.append(channel.id)

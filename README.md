@@ -1,4 +1,49 @@
-# GamePatch Notes Cog
+# narocraft-cogs
+
+A collection of custom Red Bot cogs by Lone Pixel Studios.
+
+---
+
+## Cogs
+
+### 🎮 [patchnotes](./patchnotes) — Game Patch Notes
+
+Fetches and announces game patch notes from the Steam API. Built as a replacement for paid patch note announcement bots.
+
+**Supported games:** Factorio, Stellaris, Final Fantasy XIV, No Man's Sky, Path of Exile 1 & 2
+
+### 🐛 [catbun_github](./catbun_github) — Discord → GitHub Issues
+
+Automatically creates GitHub Issues from Discord bug reports and feature requests. Watches designated channels and responds to `!bug` / `!feature` commands. Designed for indie game studios who want to funnel community feedback directly into their GitHub repo without third-party tools.
+
+---
+
+## Installation
+
+Add this repo to your Red Bot instance:
+```
+^repo add narocraft-cogs <repo_url>
+```
+
+Install a cog:
+```
+^cog install narocraft-cogs patchnotes
+^cog install narocraft-cogs catbun_github
+```
+
+---
+
+## License
+
+GPL-3.0 — see individual cog folders for details.
+
+## Disclaimer
+
+These cogs are not affiliated with any game developers or platforms. Use at your own risk.
+
+---
+
+# patchnotes — Game Patch Notes Cog
 
 A custom Redbot cog for fetching and announcing game patch notes from Steam API. Built as a replacement for paid patch note announcement bots.
 
@@ -17,66 +62,66 @@ A custom Redbot cog for fetching and announcing game patch notes from Steam API.
 
 1. Add this repository to your Redbot:
    ```
-   [p]repo add narocraft-cogs <repo_url>
+   ^repo add narocraft-cogs <repo_url>
    ```
 
 2. Install the cog:
    ```
-   [p]cog install narocraft-cogs patchnotes
+   ^cog install narocraft-cogs patchnotes
    ```
 
 3. Load the cog:
    ```
-   [p]load patchnotes
+   ^load patchnotes
    ```
 
 ## Commands
 
 ### Patch Notes Commands
 
-- **`[p]patchnotes`** - Show all available games
-- **`[p]patchnotes <game> [count]`** - Get patch notes for a specific game
+- **`^patchnotes`** - Show all available games
+- **`^patchnotes <game> [count]`** - Get patch notes for a specific game
   - `game`: Game name (factorio, stellaris, ffxiv, ff14, pathofexile, poe, pathofexile2, poe2)
   - `count`: Number of patch notes to fetch (1-10, default: 3)
-- **`[p]factorio [count]`** - Direct shortcut for Factorio patch notes
-- **`[p]patchhelp`** - Show detailed help for all commands
+- **`^factorio [count]`** - Direct shortcut for Factorio patch notes
+- **`^patchhelp`** - Show detailed help for all commands
 
 ### Configuration Commands (Admin Only)
 
-- **`[p]patchconfig`** or **`[p]pconfig`** or **`[p]patchnotesconfig`** - Show current configuration
-- **`[p]patchconfig channel [#channel]`** - Set default announcement channel
+- **`^patchconfig`** or **`^pconfig`** or **`^patchnotesconfig`** - Show current configuration
+- **`^patchconfig channel [#channel]`** - Set default announcement channel
   - If no channel specified, uses current channel
-- **`[p]patchconfig remove`** - Remove announcement channel
-- **`[p]patchconfig status`** - Show detailed configuration status
+- **`^patchconfig remove`** - Remove announcement channel
+- **`^patchconfig status`** - Show detailed configuration status
 
 ### Auto-Announcement Commands (Admin Only)
 
-- **`[p]patchconfig subscribe <game> [#channel]`** - Subscribe to automatic announcements for a game
+- **`^patchconfig subscribe <game> [#channel]`** - Subscribe to automatic announcements for a game
   - `game`: The game to subscribe to (e.g., factorio, stellaris)
   - `channel`: (Optional) Specific channel for this game's announcements
-  - Example: `[p]patchconfig subscribe factorio #factorio-news`
-- **`[p]patchconfig unsubscribe <game>`** - Unsubscribe from automatic announcements for a game
-- **`[p]patchconfig toggle`** - Toggle automatic patch note announcements on/off
+  - Example: `^patchconfig subscribe factorio #factorio-news`
+- **`^patchconfig unsubscribe <game>`** - Unsubscribe from automatic announcements for a game
+- **`^patchconfig toggle`** - Toggle automatic patch note announcements on/off
 
 ### Per-Game Channel Configuration
 
 You can specify different announcement channels for each game:
 
-1. **Default Channel**: Set with `[p]patchconfig channel #general`
+1. **Default Channel**: Set with `^patchconfig channel #general`
    - Used when no per-game channel is specified
    - Fallback if a game's specific channel is deleted
 
 2. **Game-Specific Channels**: Set when subscribing to a game
-   - Example: `[p]patchconfig subscribe factorio #factorio-updates`
+   - Example: `^patchconfig subscribe factorio #factorio-updates`
    - Overrides the default channel for that specific game
    - To change a game's channel, simply resubscribe with the new channel
 
 3. **Mixed Configuration**: Use default for some games, specific channels for others
    - Example:
      ```
-     [p]patchconfig channel #gaming
-     [p]patchconfig subscribe stellaris
-     [p]patchconfig subscribe factorio #factorio-news
+     ^patchconfig channel #gaming
+     ^patchconfig subscribe stellaris
+     ^patchconfig subscribe factorio #factorio-news
      ```
    - Stellaris announcements go to #gaming
    - Factorio announcements go to #factorio-news
@@ -85,45 +130,45 @@ You can specify different announcement channels for each game:
 
 | Game | Command | Aliases | Steam App ID |
 |------|---------|---------|-------------|
-| 🏭 Factorio | `[p]factorio` | factorio | 427520 |
-| 🌌 Stellaris | `[p]stellaris` | stellaris | 281990 |
-| ⚔️ Final Fantasy XIV | `[p]ffxiv` | ffxiv, ff14, finalfantasy14, finalfantasyxiv | 39210 |
-| 🚀 No Man's Sky | `[p]nms` | nms, nomanssky, no-mans-sky | 275850 |
-| Path of Exile | `[p]pathofexile` | poe, poe1 | 238960 |
-| Path of Exile 2 | `[p]pathofexile2` | poe2 | 238960 |
+| 🏭 Factorio | `^factorio` | factorio | 427520 |
+| 🌌 Stellaris | `^stellaris` | stellaris | 281990 |
+| ⚔️ Final Fantasy XIV | `^ffxiv` | ffxiv, ff14, finalfantasy14, finalfantasyxiv | 39210 |
+| 🚀 No Man's Sky | `^nms` | nms, nomanssky, no-mans-sky | 275850 |
+| Path of Exile | `^pathofexile` | poe, poe1 | 238960 |
+| Path of Exile 2 | `^pathofexile2` | poe2 | 238960 |
 
 ## Usage Examples
 
 ```
 # Get available games
-[p]patchnotes
+^patchnotes
 
 # Get 3 latest Factorio patch notes
-[p]patchnotes factorio
-[p]factorio
+^patchnotes factorio
+^factorio
 
 # Get 5 latest Stellaris patch notes
-[p]patchnotes stellaris 5
+^patchnotes stellaris 5
 
 # Get Final Fantasy XIV patch notes
-[p]patchnotes ffxiv
-[p]patchnotes ff14
+^patchnotes ffxiv
+^patchnotes ff14
 
 # Get No Man's Sky patch notes
-[p]patchnotes nms
-[p]patchnotes nomanssky
-[p]patchnotes no-mans-sky
+^patchnotes nms
+^patchnotes nomanssky
+^patchnotes no-mans-sky
 
 # Configuration (Admin only)
-[p]patchconfig channel #patch-notes
-[p]patchconfig status
-[p]patchconfig remove
+^patchconfig channel #patch-notes
+^patchconfig status
+^patchconfig remove
 
 # Auto-Announcement Setup (Admin only)
-[p]patchconfig subscribe factorio
-[p]patchconfig subscribe stellaris
-[p]patchconfig toggle
-[p]patchconfig unsubscribe nms
+^patchconfig subscribe factorio
+^patchconfig subscribe stellaris
+^patchconfig toggle
+^patchconfig unsubscribe nms
 ```
 
 ## Permissions Required
@@ -167,7 +212,7 @@ The cog includes a background task that:
 
 For detailed command help and examples, use:
 ```
-[p]patchhelp
+^patchhelp
 ```
 
 This will show you:

@@ -1,0 +1,13 @@
+{
+    "name": "CatbunGithub",
+    "short": "Automatically creates GitHub Issues from Discord bug reports and feature requests.",
+    "description": "Watches designated channels and responds to !bug / !feature commands to create GitHub Issues automatically. Supports source tagging (discord vs in-game), Discord CDN screenshot attachments, and posts the issue URL back to the reporter. Fully configurable per-server via Red Bot's Config system — no hardcoded values.",
+    "end_user_data_statement": "This cog includes Discord usernames and user IDs in the body of GitHub Issues for attribution. No data is stored locally by the cog.",
+    "hidden": false,
+    "disabled": false,
+    "min_bot_version": "3.5.0",
+    "min_python_version": [3, 8, 0],
+    "author": ["Lone Pixel Studios"],
+    "install_msg": "CatbunGithub loaded!\n\nConfigure with:\n  [p]cbgithub setrepo owner/repo\n  [p]cbgithub settoken YOUR_GITHUB_TOKEN\n  [p]cbgithub addbugchannel #channel\n  [p]cbgithub addfeaturechannel #channel\n  [p]cbgithub addingamechannel #channel\n  [p]cbgithub setlogchannel #channel\n  [p]cbgithub settings",
+    "requirements": ["aiohttp"]
+}

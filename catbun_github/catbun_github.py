@@ -518,8 +518,15 @@ class CatbunGithub(commands.Cog):
                 thread_issues[str(thread.id)] = issue_number
                 await self.config.thread_issues.set(thread_issues)
 
+                # Brief pause — Discord needs a moment before the thread accepts messages
+                await asyncio.sleep(1)
                 await thread.send(f"✅ Logged by {ctx.author.mention} → {issue_url}")
-                await ctx.message.add_reaction("✅")
+
+                try:
+                    await ctx.message.add_reaction("✅")
+                except discord.Forbidden:
+                    pass  # No reaction permission in this channel — not critical
+
                 await ctx.send(
                     f"✅ Created {thread.mention} and logged to GitHub.",
                     delete_after=15,

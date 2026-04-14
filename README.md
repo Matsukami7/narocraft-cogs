@@ -1,6 +1,6 @@
 # narocraft-cogs
 
-A collection of custom Red Bot cogs by Lone Pixel Studios.
+A collection of custom Red Bot cogs used by various discords
 
 ---
 

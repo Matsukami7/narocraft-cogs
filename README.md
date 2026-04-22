@@ -1,4 +1,4 @@
-# narocraft-cogs
+# matsu-cogs
 
 Custom Red Bot cogs for Discord servers. All cogs are GPL-3.0 licensed and designed for self-hosted Red Bot instances.
 
@@ -18,9 +18,9 @@ Custom Red Bot cogs for Discord servers. All cogs are GPL-3.0 licensed and desig
 ## Installation
 
 ```
-^repo add narocraft-cogs https://github.com/Matsukami7/narocraft-cogs
-^cog install narocraft-cogs catbun_github
-^cog install narocraft-cogs patchnotes
+^repo add matsu-cogs https://github.com/Matsukami7/matsu-cogs
+^cog install matsu-cogs catbun_github
+^cog install matsu-cogs patchnotes
 ^load catbun_github patchnotes
 ```
 
@@ -81,13 +81,19 @@ Reports here are held until a Developer reacts ✅ to approve or ❌ to dismiss.
 ```
 Every created issue is logged here with a link.
 
-**5. (Optional) Change the Developer role name:**
+**5. (Optional) Configure thread auto-deletion:**
+```
+^cbgithub setthreaddelay 7
+```
+Resolved threads are permanently deleted this many days after being locked. Default is `7`. Set to `0` to keep threads indefinitely.
+
+**6. (Optional) Change the Developer role name:**
 ```
 ^cbgithub setdevrolename Developer
 ```
 Default is `Developer`. This role controls who can triage in-game reports and use `^bug`/`^feature`/`^resolve`.
 
-**6. Verify config:**
+**7. Verify config:**
 ```
 ^cbgithub settings
 ```
@@ -105,19 +111,20 @@ Default is `Developer`. This role controls who can triage in-game reports and us
 | `^cbgithub addtriagechannel #channel` | Watch a text channel in triage mode (in-game reports) |
 | `^cbgithub setdevrolename <name>` | Set the role name for triage/resolve access (default: `Developer`) |
 | `^cbgithub setlogchannel #channel` | Set the private issue log channel |
-| `^cbgithub settings` | Show all current config |
+| `^cbgithub setthreaddelay <days>` | Days after locking before a thread is deleted (`0` = never) |
+| `^cbgithub settings` | Show all current config and pending deletion count |
 
 ### Developer role only
 
 | Command | Description |
 |---------|-------------|
-| `^bug <description>` | Create a GitHub bug report issue |
-| `^feature <description>` | Create a GitHub feature request issue |
+| `^bug <description>` | Create a GitHub bug report issue + forum thread |
+| `^feature <description>` | Create a GitHub feature request issue + forum thread |
 | `^resolve [reason]` | Close the current forum thread and its GitHub issue |
 
 `^bug` and `^feature` silently do nothing if run by someone without the Developer role.
 
-`^resolve` must be run inside a tracked forum thread. Posts a closing message, closes the GitHub issue with a comment, and locks + archives the thread.
+`^resolve` must be run inside a tracked forum thread. Posts a closing message, closes the GitHub issue with a comment, and locks + archives the thread. The thread is then queued for auto-deletion per the configured delay.
 
 ### Triage reactions (in-game reports channel)
 
@@ -130,14 +137,20 @@ Default is `Developer`. This role controls who can triage in-game reports and us
 
 **Forum thread created by a player:**
 - GitHub Issue created immediately with `bug` or `feature-request`, `source:discord`, `status:triage` labels
-- Bot replies in the thread: "✅ Thanks for your report! We've received it..."
+- Bot replies in the thread confirming receipt
 - GitHub URL only posted to the private log channel (not visible in the public thread)
 - Thread ID → issue number stored for later `^resolve` and GitHub sync
 
 **GitHub issue closed on GitHub directly:**
 - Cog polls GitHub every 5 minutes for newly closed issues
-- If a matching Discord forum thread is found and not already archived, bot posts a closing message and locks the thread
+- If a matching Discord forum thread is found and not already archived, bot posts a closing message, locks the thread, and queues it for deletion
 - First run after `^reload` sets the baseline — no retroactive closes
+
+**Thread auto-deletion:**
+- Applies to threads locked via `^resolve` or GitHub sync
+- Checked every 5 minutes alongside the GitHub poll
+- Threads already deleted manually are cleaned up silently
+- Disable with `^cbgithub setthreaddelay 0`
 
 ## GitHub Labels Used
 
@@ -186,7 +199,7 @@ Fetches and announces game patch notes from the Steam API. Built as a free repla
 ## Setup
 
 ```
-^cog install narocraft-cogs patchnotes
+^cog install matsu-cogs patchnotes
 ^load patchnotes
 ^patchconfig channel #patch-notes
 ^patchconfig subscribe factorio

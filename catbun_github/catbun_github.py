@@ -22,13 +22,14 @@ Setup commands (bot owner only):
   ^cbgithub addtriagechannel #channel  ← in-game reports, requires Developer reaction
   ^cbgithub setdevrolename <role name> ← name of role allowed to triage (default: Developer)
   ^cbgithub setlogchannel #channel
+  ^cbgithub setthreaddelay <days>      ← days after locking before thread is deleted (0 = never)
   ^cbgithub settings
 """
 
 import asyncio
 import aiohttp
 import discord
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from discord.ext import tasks
 from redbot.core import commands, Config
 from redbot.core.bot import Red
@@ -48,11 +49,13 @@ class CatbunGithub(commands.Cog):
             github_repo=None,
             bug_channel_ids=[],
             feature_channel_ids=[],
-            triage_channel_ids=[],   # in-game reports — held for Developer reaction
+            triage_channel_ids=[],      # in-game reports — held for Developer reaction
             log_channel_id=None,
             dev_role_name="Developer",
-            thread_issues={},        # thread_id (str) → github issue number (int)
-            last_github_sync=None,   # ISO timestamp of last closed-issue poll
+            thread_issues={},           # thread_id (str) → github issue number (int)
+            last_github_sync=None,      # ISO timestamp of last closed-issue poll
+            thread_delete_after_days=7, # days after locking before a thread is deleted (0 = never)
+            pending_deletions={},       # thread_id (str) → ISO timestamp to delete at
         )
         self.poll_github_closed.start()
 
@@ -65,43 +68,65 @@ class CatbunGithub(commands.Cog):
 
     @tasks.loop(minutes=5)
     async def poll_github_closed(self):
-        """Check GitHub for issues closed since the last poll and lock matching threads."""
+        """Check GitHub for issues closed since the last poll, lock matching threads, and delete due threads."""
+        now = datetime.now(timezone.utc)
+
+        # --- GitHub closed-issue sync ---
         token = await self.config.github_token()
         repo  = await self.config.github_repo()
-        if not token or not repo:
-            return
+        if token and repo:
+            last_sync = await self.config.last_github_sync()
 
-        now       = datetime.now(timezone.utc)
-        last_sync = await self.config.last_github_sync()
+            # First run after deploy — record timestamp and skip to avoid mass-closing old threads
+            if last_sync is None:
+                await self.config.last_github_sync.set(now.isoformat())
+            else:
+                closed_numbers = await self._fetch_closed_issues_since(token, repo, last_sync)
 
-        # First run after deploy — record timestamp and skip to avoid mass-closing old threads
-        if last_sync is None:
-            await self.config.last_github_sync.set(now.isoformat())
-            return
+                if closed_numbers:
+                    thread_issues   = await self.config.thread_issues()
+                    issue_to_thread = {v: k for k, v in thread_issues.items()}
 
-        closed_numbers = await self._fetch_closed_issues_since(token, repo, last_sync)
+                    for issue_number in closed_numbers:
+                        thread_id_str = issue_to_thread.get(issue_number)
+                        if not thread_id_str:
+                            continue
+                        thread = self.bot.get_channel(int(thread_id_str))
+                        if not thread or not isinstance(thread, discord.Thread):
+                            continue
+                        if thread.archived or thread.locked:
+                            continue  # already closed
 
-        if closed_numbers:
-            thread_issues  = await self.config.thread_issues()
-            issue_to_thread = {v: k for k, v in thread_issues.items()}
+                        await thread.send(
+                            f"🔒 Issue #{issue_number} was closed on GitHub. "
+                            f"This thread has been locked."
+                        )
+                        await thread.edit(locked=True, archived=True)
+                        await self._schedule_thread_deletion(str(thread.id))
 
-            for issue_number in closed_numbers:
-                thread_id_str = issue_to_thread.get(issue_number)
-                if not thread_id_str:
-                    continue
-                thread = self.bot.get_channel(int(thread_id_str))
-                if not thread or not isinstance(thread, discord.Thread):
-                    continue
-                if thread.archived or thread.locked:
-                    continue  # already closed
+                await self.config.last_github_sync.set(now.isoformat())
 
-                await thread.send(
-                    f"🔒 Issue #{issue_number} was closed on GitHub. "
-                    f"This thread has been locked."
-                )
-                await thread.edit(locked=True, archived=True)
+        # --- Pending thread deletions ---
+        pending = await self.config.pending_deletions()
+        if pending:
+            thread_issues = await self.config.thread_issues()
+            to_delete = [
+                tid for tid, iso in pending.items()
+                if datetime.fromisoformat(iso) <= now
+            ]
+            for tid in to_delete:
+                thread = self.bot.get_channel(int(tid))
+                if thread and isinstance(thread, discord.Thread):
+                    try:
+                        await thread.delete()
+                    except (discord.Forbidden, discord.NotFound):
+                        pass
+                del pending[tid]
+                thread_issues.pop(tid, None)
 
-        await self.config.last_github_sync.set(now.isoformat())
+            if to_delete:
+                await self.config.pending_deletions.set(pending)
+                await self.config.thread_issues.set(thread_issues)
 
     @poll_github_closed.before_loop
     async def before_poll(self):
@@ -171,19 +196,39 @@ class CatbunGithub(commands.Cog):
         await self.config.log_channel_id.set(channel.id)
         await ctx.send(f"✅ Issue log channel set to {channel.mention}.")
 
+    @cbgithub.command(name="setthreaddelay")
+    async def set_thread_delay(self, ctx: commands.Context, days: int):
+        """Set how many days after locking a thread is automatically deleted (0 to disable)."""
+        if days < 0:
+            await ctx.send("❌ Days must be 0 or greater.")
+            return
+        await self.config.thread_delete_after_days.set(days)
+        if days == 0:
+            await ctx.send("✅ Thread auto-deletion disabled. Threads will stay archived indefinitely.")
+        else:
+            await ctx.send(f"✅ Resolved threads will be deleted **{days} day(s)** after being locked.")
+
     @cbgithub.command(name="settings")
     async def show_settings(self, ctx: commands.Context):
         """Show current configuration."""
-        repo          = await self.config.github_repo()
-        token         = await self.config.github_token()
-        bug_ids       = await self.config.bug_channel_ids()
-        feat_ids      = await self.config.feature_channel_ids()
-        triage_ids    = await self.config.triage_channel_ids()
-        log_id        = await self.config.log_channel_id()
-        dev_role_name = await self.config.dev_role_name()
+        repo              = await self.config.github_repo()
+        token             = await self.config.github_token()
+        bug_ids           = await self.config.bug_channel_ids()
+        feat_ids          = await self.config.feature_channel_ids()
+        triage_ids        = await self.config.triage_channel_ids()
+        log_id            = await self.config.log_channel_id()
+        dev_role_name     = await self.config.dev_role_name()
+        delete_after_days = await self.config.thread_delete_after_days()
+        pending           = await self.config.pending_deletions()
 
         def fmt_channels(ids):
             return ", ".join(f"<#{i}>" for i in ids) if ids else "None"
+
+        delete_value = (
+            f"{delete_after_days} day(s) after locking"
+            if delete_after_days > 0
+            else "Disabled (threads kept indefinitely)"
+        )
 
         embed = discord.Embed(title="CatbunGithub Settings", color=0x2ecc71)
         embed.add_field(name="Repo",                    value=repo or "Not set",                      inline=False)
@@ -193,6 +238,8 @@ class CatbunGithub(commands.Cog):
         embed.add_field(name="Triage channels",         value=fmt_channels(triage_ids),               inline=False)
         embed.add_field(name="Triage role",             value=dev_role_name,                          inline=False)
         embed.add_field(name="Log channel",             value=f"<#{log_id}>" if log_id else "None",   inline=False)
+        embed.add_field(name="Thread auto-delete",      value=delete_value,                           inline=False)
+        embed.add_field(name="Pending deletions",       value=str(len(pending)),                      inline=False)
         await ctx.send(embed=embed)
 
     # -------------------------------------------------------------------------
@@ -242,11 +289,17 @@ class CatbunGithub(commands.Cog):
             success = await self._close_github_issue(issue_number, ctx.author.display_name, reason)
             github_msg = f"\n• GitHub issue #{issue_number} closed." if success else "\n• (Could not close GitHub issue — check bot config.)"
 
+        delete_after_days = await self.config.thread_delete_after_days()
+        delete_notice = (
+            f"\n\n*This thread will be automatically deleted in {delete_after_days} day(s).*"
+            if delete_after_days > 0 else ""
+        )
         await thread.send(
             f"✅ **Resolved** by {ctx.author.display_name}: {reason}{github_msg}\n\n"
-            f"*This thread has been locked.*"
+            f"*This thread has been locked.*{delete_notice}"
         )
         await thread.edit(locked=True, archived=True)
+        await self._schedule_thread_deletion(str(thread.id))
 
     # -------------------------------------------------------------------------
     # Forum listener — fires when a new post is created in a forum channel
@@ -648,6 +701,16 @@ class CatbunGithub(commands.Cog):
                 json={"state": "closed", "state_reason": "completed"},
             ) as resp:
                 return resp.status == 200
+
+    async def _schedule_thread_deletion(self, thread_id: str):
+        """Queue a thread for deletion after the configured delay. No-op if delay is 0."""
+        days = await self.config.thread_delete_after_days()
+        if days <= 0:
+            return
+        delete_at = (datetime.now(timezone.utc) + timedelta(days=days)).isoformat()
+        pending = await self.config.pending_deletions()
+        pending[thread_id] = delete_at
+        await self.config.pending_deletions.set(pending)
 
     async def _post_to_log(self, report_type: str, source: str,
                            title: str, issue_url: str):

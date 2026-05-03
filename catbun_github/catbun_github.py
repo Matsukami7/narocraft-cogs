@@ -98,8 +98,7 @@ class CatbunGithub(commands.Cog):
                             continue  # already closed
 
                         await thread.send(
-                            f"🔒 Issue #{issue_number} was closed on GitHub. "
-                            f"This thread has been locked."
+                            "🔒 This report has been resolved and the thread has been locked."
                         )
                         await thread.edit(locked=True, archived=True)
                         await self._schedule_thread_deletion(str(thread.id))
